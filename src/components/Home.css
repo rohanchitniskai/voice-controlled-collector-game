@@ -1,0 +1,25 @@
+.btn-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 50px;
+}
+
+.button {
+  margin: 10px;
+  height: 30px;
+  width: 70px;
+  cursor: pointer;
+  background-color: #ffa000;
+  border-radius: 10px;
+  border: none;
+}
+
+.title {
+  text-align: center;
+}
+
+.collector-icon {
+  line-height: 0.5;
+  top: 0;
+  font-size: 40px;
+}
