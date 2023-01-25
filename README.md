@@ -14,12 +14,12 @@ The App UI contains the following components -
 ## How to Play
 1.Click on the connect button to connect with voice API and websocket
 2.Once connected give the following voice commands - 
-    - "go" to move collector
-    - "stop" to stop collector
-    - "left" to move collector left
-    - "right" to move collector right
-    - "up" to move collector up
-    - "down" to move collector
+    1. "go" to move collector
+    2. "stop" to stop collector
+    3. "left" to move collector left
+    4. "right" to move collector right
+    5. "up" to move collector up
+    6. "down" to move collector
 3.Once all the mines are picked, grid size and time will be recorded.
 4.Best score will be displayed at the top of the table.
 5.Click on restart button to restart game.
