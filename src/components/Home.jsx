@@ -107,13 +107,14 @@ const Home = () => {
   /* set collector direction on UI */
   const getCollectorDirection = () => {
     return collectorPosition === "right" ? (
-      <span className="collector-icon">&#8594;</span>
+      <img className="collector-right-icon" src="../right.png"/>
     ) : collectorPosition === "left" ? (
-      <span className="collector-icon">&#8592;</span>
+      <img className="collector-left-icon" src="../left.png"/>
+      // <span className="collector-icon">&#8592;</span>
     ) : collectorPosition === "up" ? (
-      <span className="collector-icon">&#8593;</span>
+      <img className="collector-right-icon" src="../up.png"/>
     ) : collectorPosition === "down" ? (
-      <span className="collector-icon">&#8595;</span>
+      <img className="collector-right-icon" src="../down.png"/>
     ) : (
       <span>&#8594;</span>
     );
@@ -532,6 +533,7 @@ const Home = () => {
     ];
     scoreBoard = scoreBoard.sort((a, b) => a.timestamp - b.timestamp);
     setScore(scoreBoard);
+    localStorage.setItem("bestScore", JSON.stringify(scoreBoard[0].time));
     localStorage.setItem("score", JSON.stringify(scoreBoard));
   };
 
@@ -586,7 +588,7 @@ const Home = () => {
                 >
                   {grid[i][k] === 2 && getCollectorDirection()}
 
-                  {grid[i][k] === 1 ? <span>&#9711;</span> : null}
+                  {grid[i][k] === 1 ? <img className="collector-right-icon" src="../carrot.png"/> : null}
                 </div>
               ))
             )}
@@ -601,8 +603,9 @@ const Home = () => {
         </div>
       </div>
       <div className="scoreBoard">
-        <label>Timer</label> :{" "}
-        <span style={{ fontSize: "20px", fontWeight: "500" }}>{timer}</span>
+        <span style={{ fontSize: "20px" }}>Timer : {timer}</span>
+        <span style={{ fontSize: "20px" }}>Best Score : {localStorage.getItem('bestScore')}</span>
+        <span style={{ fontSize: "20px" }}>Last Command : {collectorCommand}</span>
         <table>
           <tbody>
             <tr>

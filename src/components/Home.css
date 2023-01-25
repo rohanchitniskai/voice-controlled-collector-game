@@ -18,10 +18,14 @@
   text-align: center;
 }
 
-.collector-icon {
-  line-height: 0.5;
-  top: 0;
-  font-size: 40px;
+.collector-left-icon {
+  height: 34px;
+  width: 35px;
+}
+
+.collector-right-icon {
+  height: 34px;
+  width: 33px;
 }
 
 .gridSetting {
@@ -41,6 +45,8 @@
 .scoreBoard {
   width: 25%;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 table {
