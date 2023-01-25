@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import AudioCaptureStreamingService from "../services/audio-services";
+import { fetchWebsocketUrl } from "../services/microphone-service";
 import "./Home.css";
 
 const Home = () => {
@@ -7,6 +9,8 @@ const Home = () => {
 
   /* state to set collector direction */
   const [collectorPosition, setCollectorPosition] = useState("left");
+
+  const [collectorCommand, setCollectorCommand] = useState(collectorPosition);
 
   /* state to set collector co-ordinates in grid */
   const [collectorCoordinates, setCollectorCoordinates] = useState({
@@ -26,6 +30,8 @@ const Home = () => {
   /* number of columns in grid */
   const numCols = 10;
 
+  const [connection, setConnection] = useState(false);
+
   useEffect(() => {
     /* initialize the grid */
     setGrid(initializeGrid());
@@ -37,18 +43,24 @@ const Home = () => {
       moveCollectorRight();
     } else if (collectorPosition === "left") {
       moveCollectorLeft();
-    } else if (collectorPosition === "bottom") {
+    } else if (collectorPosition === "down") {
       moveCollectorBottom();
-    } else if (collectorPosition === "top") {
+    } else if (collectorPosition === "up") {
       moveCollectorTop();
     } else {
       moveCollectorRight();
     }
   }, [collectorPosition]);
 
-  // useEffect(() => {
-  //   connectWebsocket();
-  // }, []);
+  useEffect(() => {
+    if (collectorCommand === "go" || collectorCommand === "stop") {
+      startGame();
+    }
+  }, [collectorCommand]);
+
+  useEffect(() => {
+    if (connection) connectWebsocket();
+  }, [connection]);
 
   /* initialize the grid with collector position */
   const initializeGrid = () => {
@@ -67,6 +79,7 @@ const Home = () => {
   };
 
   /* initialize the grid with mines 1/8th of the grid spots */
+  //TODO: fix random positions
   const initializeMines = (rows) => {
     const numberOfMines = parseInt((numRows * numCols) / 8);
     let minesCount = 0;
@@ -88,9 +101,9 @@ const Home = () => {
       <span className="collector-icon">&#8594;</span>
     ) : collectorPosition === "left" ? (
       <span className="collector-icon">&#8592;</span>
-    ) : collectorPosition === "top" ? (
+    ) : collectorPosition === "up" ? (
       <span className="collector-icon">&#8593;</span>
-    ) : collectorPosition === "bottom" ? (
+    ) : collectorPosition === "down" ? (
       <span className="collector-icon">&#8595;</span>
     ) : (
       <span>&#8594;</span>
@@ -106,7 +119,7 @@ const Home = () => {
         moveCollectorRight();
       } else if (collectorPosition === "left") {
         moveCollectorLeft();
-      } else if (collectorPosition === "bottom") {
+      } else if (collectorPosition === "down") {
         moveCollectorBottom();
       } else if (collectorPosition === "top") {
         moveCollectorTop();
@@ -168,15 +181,15 @@ const Home = () => {
 
   /* move collector down on the grid */
   const moveCollectorBottom = async () => {
-    positionRef.current = "bottom";
-    if (runningRef.current && collectorPosition === "bottom") {
+    positionRef.current = "down";
+    if (runningRef.current && collectorCommand === "down") {
       let gridCopy = JSON.parse(JSON.stringify(grid));
-      /* traverse grid top to bottom */
+      /* traverse grid top to down */
       let y = collectorCoordinates.xCord;
       for (let i = collectorCoordinates.yCord; i < numCols; i++) {
         for (let j = y; j < numRows; j++) {
           /* stop loop if running state change or direction changes  */
-          if (!runningRef.current || positionRef.current !== "bottom") {
+          if (!runningRef.current || positionRef.current !== "down") {
             setCollectorPosition(positionRef.current);
             clearTimeout(timeOutId);
             return;
@@ -193,15 +206,15 @@ const Home = () => {
 
   /* move collector up on the grid */
   const moveCollectorTop = async () => {
-    positionRef.current = "top";
-    if (runningRef.current && collectorPosition === "top") {
+    positionRef.current = "up";
+    if (runningRef.current && collectorPosition === "up") {
       let gridCopy = JSON.parse(JSON.stringify(grid));
-      /* traverse grid bottom to top */
+      /* traverse grid bottom to up */
       let y = collectorCoordinates.xCord;
       for (let i = collectorCoordinates.yCord; i >= 0; i--) {
         for (let j = y; j >= 0; j--) {
           /* stop loop if running state change or direction changes  */
-          if (!runningRef.current || positionRef.current !== "top") {
+          if (!runningRef.current || positionRef.current !== "up") {
             setCollectorPosition(positionRef.current);
             clearTimeout(timeOutId);
             return;
@@ -329,6 +342,62 @@ const Home = () => {
     });
   };
 
+  const connectWebsocket = async () => {
+    const { websocketSendUrl, websocketReceiveUrl } = await fetchWebsocketUrl();
+    startMicrophoneCapture(websocketSendUrl, websocketReceiveUrl);
+  };
+
+  //Start audio capturing services using microphone input
+  const startMicrophoneCapture = (websocketSendUrl, websocketReceiveUrl) => {
+    AudioCaptureStreamingService.start(websocketSendUrl);
+    let websocket;
+    //Connect to websocket to receive result data
+    if (websocket === undefined) {
+      const socket = new WebSocket(websocketReceiveUrl);
+      socket.onopen = () => {
+        console.log("Websocket is connected");
+        socket.addEventListener("message", (event) => {
+          let currentDate = new Date();
+          console.log(
+            "At " + currentDate + " Websocket message: " + event.data
+          );
+          const jsonData = JSON.parse(event.data);
+          interpretGrammarMessage(jsonData);
+        });
+
+        //Resets text box highlight on websocket close
+        socket.addEventListener("close", () => {
+          console.log("Websocket closed.");
+          AudioCaptureStreamingService.stop();
+        });
+
+        socket.addEventListener("error", (event) => {
+          console.log("Websocket error:", event);
+        });
+      };
+    }
+  };
+
+  //Processing grammar websocket results
+  const interpretGrammarMessage = (message) => {
+    try {
+      if (message.lastEvent === "RECOGNITION-COMPLETE") {
+        //If a word in the grammar has MATCHED
+        if (message.status == "MATCH") {
+          const utterance = message.alternatives[0].utterance;
+          if (utterance !== "go" && utterance !== "stop")
+            setCollectorPosition(utterance);
+          setCollectorCommand(utterance);
+        } else if (message.status == "NOMATCH") {
+        }
+      } else if (message.lastEvent !== "RECOGNITION-COMPLETE") {
+      } else throw new Error("Unable to obtain grammar.");
+    } catch (err) {
+      alert(err.message);
+      console.log(err.message);
+    }
+  };
+
   return (
     <div>
       <div
@@ -361,6 +430,9 @@ const Home = () => {
           )}
       </div>
       <div className="btn-container">
+        <button className="button" onClick={() => setConnection(true)}>
+          <span>{"Connect"}</span>
+        </button>
         <button className="button" onClick={() => startGame()}>
           <span>{running ? "Stop" : "Start"}</span>
         </button>
